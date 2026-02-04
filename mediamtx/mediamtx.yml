@@ -1,0 +1,27 @@
+# MediaMTX config
+# Referencia: https://mediamtx.org/docs/references/configuration-file
+
+logLevel: info
+
+api: yes
+apiAddress: 0.0.0.0:9997
+
+rtspAddress: :8554
+hlsAddress: :8888
+webrtcAddress: :8889
+
+# Habilitar grabacion local en el edge (opcional)
+# Puedes apagarla en la fase inicial si solo quieres live.
+pathDefaults:
+  record: no
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
+  recordFormat: fmp4
+
+paths:
+  # Ejemplo para la camara Hikvision del profesor.
+  # Ajusta usuario/password y canal segun el modelo.
+  cam-profesor:
+    source: rtsp://admin:CAMERA_PASSWORD@192.168.1.80:554/Streaming/Channels/101
+
+  # Habilita todas las demas rutas para futuras camaras.
+  all_others:
