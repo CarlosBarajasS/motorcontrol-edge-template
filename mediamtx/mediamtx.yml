@@ -3,8 +3,12 @@
 
 logLevel: info
 
+# API Configuration
 api: yes
 apiAddress: 0.0.0.0:9997
+
+# Disable authentication (for local testing)
+authMethods: []
 
 rtspAddress: :8554
 hlsAddress: :8888
