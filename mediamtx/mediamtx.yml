@@ -7,6 +7,9 @@ logLevel: info
 api: yes
 apiAddress: 0.0.0.0:9997
 
+# Authentication methods
+rtspAuthMethods: [basic]
+
 rtspAddress: :8554
 hlsAddress: :8888
 webrtcAddress: :8889
