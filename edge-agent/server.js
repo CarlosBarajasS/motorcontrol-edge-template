@@ -20,6 +20,8 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
 
 // MediaMTX API
 const MEDIAMTX_API_URL = process.env.MEDIAMTX_API_URL || 'http://mediamtx:9997';
+const MEDIAMTX_USERNAME = process.env.MEDIAMTX_USERNAME || '';
+const MEDIAMTX_PASSWORD = process.env.MEDIAMTX_PASSWORD || '';
 
 // Intervalos
 const HEARTBEAT_INTERVAL_MS = parseInt(process.env.HEARTBEAT_INTERVAL_MS) || 30000; // 30 segundos
@@ -36,7 +38,14 @@ const mqttService = new MqttClientService({
   clientId: CLIENT_ID,
 });
 
-const cameraMonitor = new CameraMonitorService(mqttService, MEDIAMTX_API_URL);
+const cameraMonitor = new CameraMonitorService(
+  mqttService,
+  MEDIAMTX_API_URL,
+  MEDIAMTX_USERNAME && MEDIAMTX_PASSWORD ? {
+    username: MEDIAMTX_USERNAME,
+    password: MEDIAMTX_PASSWORD,
+  } : null
+);
 const systemMonitor = new SystemMonitorService();
 
 // ========================================
