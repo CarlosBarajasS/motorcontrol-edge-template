@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(test:*)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(ssh:*)",
+      "Bash(sshpass:*)"
     ]
   }
 }
