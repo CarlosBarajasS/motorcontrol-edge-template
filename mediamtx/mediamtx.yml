@@ -7,8 +7,15 @@ logLevel: info
 api: yes
 apiAddress: 0.0.0.0:9997
 
+# Authentication - Usuario simple para API interna
+authInternalUsers:
+  - user: edge
+    pass: edge123
+    permissions:
+      - action: api
+      - action: read
+
 # Authentication methods para RTSP (streams)
-# La API queda sin autenticación por defecto
 rtspAuthMethods: [basic]
 
 rtspAddress: :8554

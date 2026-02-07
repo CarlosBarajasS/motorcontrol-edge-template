@@ -1,9 +1,10 @@
 const axios = require('axios');
 
 class CameraMonitorService {
-  constructor(mqttService, mediamtxApiUrl = 'http://mediamtx:9997') {
+  constructor(mqttService, mediamtxApiUrl = 'http://mediamtx:9997', mediamtxAuth = null) {
     this.mqttService = mqttService;
     this.mediamtxApiUrl = mediamtxApiUrl;
+    this.mediamtxAuth = mediamtxAuth; // { username, password }
     this.cameras = new Map();
     this.monitorInterval = null;
     this.pollIntervalMs = 10000; // 10 segundos
@@ -41,9 +42,19 @@ class CameraMonitorService {
   async fetchCamerasStatus() {
     try {
       // MediaMTX API v3: GET /v3/paths/list
-      const response = await axios.get(`${this.mediamtxApiUrl}/v3/paths/list`, {
+      const config = {
         timeout: 5000,
-      });
+      };
+
+      // Agregar autenticación Basic si está configurada
+      if (this.mediamtxAuth && this.mediamtxAuth.username) {
+        config.auth = {
+          username: this.mediamtxAuth.username,
+          password: this.mediamtxAuth.password || '',
+        };
+      }
+
+      const response = await axios.get(`${this.mediamtxApiUrl}/v3/paths/list`, config);
 
       if (response.data && response.data.items) {
         this.processPaths(response.data.items);
