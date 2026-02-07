@@ -18,10 +18,16 @@ pathDefaults:
   recordFormat: fmp4
 
 paths:
-  # Ejemplo para la camara Hikvision del profesor.
-  # Ajusta usuario/password y canal segun el modelo.
-  cam-profesor:
-    source: rtsp://admin:CAMERA_PASSWORD@192.168.1.80:554/Streaming/Channels/101
+  # Camara Hikvision DS-2CD2T23G0-I5 - IP: 192.168.1.100
+  # Main stream (alta calidad: 1920x1080P @ 30fps H.264)
+  cam-principal:
+    source: rtsp://admin:Vyepez6320@192.168.1.100:554/Streaming/Channels/101
+    # Descomentar para habilitar grabación local:
+    # record: yes
 
-  # Habilita todas las demas rutas para futuras camaras.
+  # Sub stream (baja calidad, ideal para celulares o conexiones lentas)
+  cam-principal-low:
+    source: rtsp://admin:Vyepez6320@192.168.1.100:554/Streaming/Channels/102
+
+  # Ruta comodín para agregar más cámaras dinámicamente en el futuro
   all_others:
