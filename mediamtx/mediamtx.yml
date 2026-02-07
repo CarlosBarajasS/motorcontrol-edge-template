@@ -7,11 +7,8 @@ logLevel: info
 api: yes
 apiAddress: 0.0.0.0:9997
 
-# Deshabilitar autenticación de la API
-# (RTSP mantiene auth, pero la API interna queda abierta)
-authInternalUsers: []
-
-# Authentication methods para RTSP
+# Authentication methods para RTSP (streams)
+# La API queda sin autenticación por defecto
 rtspAuthMethods: [basic]
 
 rtspAddress: :8554
