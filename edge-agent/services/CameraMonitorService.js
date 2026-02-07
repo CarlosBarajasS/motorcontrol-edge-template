@@ -140,6 +140,10 @@ class CameraMonitorService {
    * Registrar nueva cámara en el servidor
    */
   registerNewCamera(cameraId, status) {
+    // Usar IP pública del gateway desde variable de entorno
+    // Si no está configurada, usar localhost (útil para desarrollo)
+    const gatewayIp = process.env.GATEWAY_PUBLIC_IP || process.env.MQTT_HOST || 'localhost';
+
     const cameraInfo = {
       name: status.name || cameraId,
       model: this.extractModelFromSource(status.sourceUrl),
@@ -147,9 +151,9 @@ class CameraMonitorService {
       rtspUrl: status.sourceUrl,
       capabilities: ['rtsp', 'hls', 'webrtc'],
       streams: {
-        main: `rtsp://localhost:8554/${cameraId}`,
-        hls: `http://localhost:8888/${cameraId}`,
-        webrtc: `http://localhost:8889/${cameraId}`,
+        main: `rtsp://${gatewayIp}:8554/${cameraId}`,
+        hls: `http://${gatewayIp}:8888/${cameraId}/index.m3u8`,
+        webrtc: `http://${gatewayIp}:8889/${cameraId}`,
       },
     };
 
