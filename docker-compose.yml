@@ -18,16 +18,13 @@ services:
     build: ./edge-agent
     container_name: edge-agent
     restart: unless-stopped
+    network_mode: host
     env_file:
       - .env
     environment:
       - TZ=${TZ:-America/Mexico_City}
-    ports:
-      - "8090:8090"
     depends_on:
       - mediamtx
-    networks:
-      - edge-net
 
 networks:
   edge-net:
