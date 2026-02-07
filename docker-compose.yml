@@ -3,19 +3,37 @@ services:
     image: bluenviron/mediamtx:latest
     container_name: edge-mediamtx
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "8554:8554"   # RTSP
+      - "8888:8888"   # HLS
+      - "8889:8889"   # WebRTC HTTP
+      - "8189:8189/udp" # WebRTC ICE/UDP
+      - "9997:9997"   # API
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - ./data/recordings:/recordings
+    networks:
+      - edge-net
 
   edge-agent:
     build: ./edge-agent
     container_name: edge-agent
     restart: unless-stopped
-    network_mode: host
     env_file:
       - .env
     environment:
       - TZ=${TZ:-America/Mexico_City}
     depends_on:
       - mediamtx
+    networks:
+      - edge-net
+      - shared-edge-network  # Red compartida con backend
+
+networks:
+  edge-net:
+    driver: bridge
+
+  # Red compartida con backend (debe crearse antes con: docker network create shared-edge-network)
+  shared-edge-network:
+    external: true
+    name: shared-edge-network
