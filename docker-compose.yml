@@ -10,6 +10,9 @@ services:
       - "8189:8189/udp" # WebRTC ICE/UDP
       - "9997:9997"   # API
     environment:
+      # Credenciales del edge-mediamtx local (para que ffmpeg pueda leer el stream)
+      - MEDIAMTX_USERNAME=${MEDIAMTX_USERNAME:-edge}
+      - MEDIAMTX_PASSWORD=${MEDIAMTX_PASSWORD:-edge123}
       # Credenciales para empujar streams al servidor central
       - MEDIAMTX_PUSH_USER=${MEDIAMTX_PUSH_USER:-edge-relay}
       - MEDIAMTX_PUSH_PASS=${MEDIAMTX_PUSH_PASS:-relay-secret-changeme}
