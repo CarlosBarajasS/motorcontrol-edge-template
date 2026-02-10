@@ -9,6 +9,15 @@ services:
       - "8889:8889"   # WebRTC HTTP
       - "8189:8189/udp" # WebRTC ICE/UDP
       - "9997:9997"   # API
+    environment:
+      # Credenciales para empujar streams al servidor central
+      - MEDIAMTX_PUSH_USER=${MEDIAMTX_PUSH_USER:-edge-relay}
+      - MEDIAMTX_PUSH_PASS=${MEDIAMTX_PUSH_PASS:-relay-secret-changeme}
+      # Servidor central: IP/hostname público y puerto RTSP expuesto
+      - CENTRAL_RTSP_HOST=${CENTRAL_RTSP_HOST:-177.247.175.4}
+      - CENTRAL_RTSP_PORT=${CENTRAL_RTSP_PORT:-8556}
+      # Identificador único del gateway (se usa como prefijo de path en el central)
+      - GATEWAY_CLIENT_ID=${CLIENT_ID:-edge-gateway-001}
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - ./data/recordings:/recordings
