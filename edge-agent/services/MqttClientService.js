@@ -6,7 +6,6 @@ class MqttClientService {
     this.client = null;
     this.connected = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 10;
     this.messageHandlers = new Map();
   }
 
@@ -58,11 +57,6 @@ class MqttClientService {
     this.client.on('reconnect', () => {
       this.reconnectAttempts++;
       console.log(`[MQTT] 🔄 Reconnecting... (attempt ${this.reconnectAttempts})`);
-
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('[MQTT] Max reconnect attempts reached. Giving up.');
-        this.client.end(true);
-      }
     });
 
     this.client.on('offline', () => {

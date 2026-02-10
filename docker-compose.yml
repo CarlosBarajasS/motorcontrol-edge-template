@@ -29,6 +29,12 @@ services:
     networks:
       - edge-net
       - shared-edge-network  # Red compartida con backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 60s
 
 networks:
   edge-net:

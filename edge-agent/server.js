@@ -59,19 +59,23 @@ app.use(express.json());
 app.get('/health', async (req, res) => {
   const systemHealth = await systemMonitor.checkHealth();
   const cameraStats = cameraMonitor.getStats();
+  const mqttConnected = mqttService.isConnected();
 
-  res.json({
-    status: systemHealth.healthy ? 'ok' : 'degraded',
+  const body = {
+    status: mqttConnected && systemHealth.healthy ? 'ok' : 'degraded',
     clientId: CLIENT_ID,
     gatewayName: GATEWAY_NAME,
     location: LOCATION,
     mqtt: {
-      connected: mqttService.isConnected(),
+      connected: mqttConnected,
     },
     cameras: cameraStats,
     system: systemHealth,
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  // Devolver 503 si MQTT está desconectado para que Docker detecte el fallo y reinicie
+  res.status(mqttConnected ? 200 : 503).json(body);
 });
 
 // Información general del gateway
