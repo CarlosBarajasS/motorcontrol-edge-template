@@ -140,9 +140,29 @@ class CameraMonitorService {
    * Registrar nueva cámara en el servidor
    */
   registerNewCamera(cameraId, status) {
-    // Usar IP pública del gateway desde variable de entorno
-    // Si no está configurada, usar localhost (útil para desarrollo)
-    const gatewayIp = process.env.GATEWAY_PUBLIC_IP || process.env.MQTT_HOST || 'localhost';
+    const gatewayId = process.env.CLIENT_ID || process.env.GATEWAY_CLIENT_ID || 'edge-gateway-001';
+    const centralRtspHost = process.env.CENTRAL_RTSP_HOST;
+    const centralRtspPort = process.env.CENTRAL_RTSP_PORT || '8556';
+
+    let streams;
+    if (centralRtspHost) {
+      // Modo relay: el edge empuja RTSP al central-mediamtx del servidor.
+      // El admin accede vía proxy API → central-mediamtx (nombre Docker interno).
+      // No se necesita abrir puertos en la red del cliente.
+      streams = {
+        main: `rtsp://${centralRtspHost}:${centralRtspPort}/${gatewayId}/${cameraId}`,
+        hls: `http://central-mediamtx:8888/${gatewayId}/${cameraId}/index.m3u8`,
+        webrtc: `http://central-mediamtx:8889/${gatewayId}/${cameraId}`,
+      };
+    } else {
+      // Modo local: edge en la misma red que el servidor (acceso directo sin relay)
+      const gatewayIp = process.env.GATEWAY_PUBLIC_IP || process.env.MQTT_HOST || 'localhost';
+      streams = {
+        main: `rtsp://${gatewayIp}:8554/${cameraId}`,
+        hls: `http://${gatewayIp}:8888/${cameraId}/index.m3u8`,
+        webrtc: `http://${gatewayIp}:8889/${cameraId}`,
+      };
+    }
 
     const cameraInfo = {
       name: status.name || cameraId,
@@ -150,11 +170,7 @@ class CameraMonitorService {
       ip: this.extractIpFromSource(status.sourceUrl),
       rtspUrl: status.sourceUrl,
       capabilities: ['rtsp', 'hls', 'webrtc'],
-      streams: {
-        main: `rtsp://${gatewayIp}:8554/${cameraId}`,
-        hls: `http://${gatewayIp}:8888/${cameraId}/index.m3u8`,
-        webrtc: `http://${gatewayIp}:8889/${cameraId}`,
-      },
+      streams,
     };
 
     this.mqttService.registerCamera(cameraId, cameraInfo);

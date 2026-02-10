@@ -28,6 +28,15 @@ pathDefaults:
   record: no
   recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
   recordFormat: fmp4
+  # Relay al servidor central cuando el stream esté activo.
+  # El edge empuja RTSP al central-mediamtx → sin necesidad de abrir puertos en el cliente.
+  # Si CENTRAL_RTSP_HOST no está definido, ffmpeg fallará silenciosamente (runOnReadyRestart lo reintenta).
+  runOnReady: >-
+    ffmpeg -re
+    -i rtsp://127.0.0.1:8554/$MTX_PATH
+    -c copy -f rtsp
+    rtsp://${MEDIAMTX_PUSH_USER}:${MEDIAMTX_PUSH_PASS}@${CENTRAL_RTSP_HOST}:${CENTRAL_RTSP_PORT:-8556}/${GATEWAY_CLIENT_ID}/$MTX_PATH
+  runOnReadyRestart: yes
 
 paths:
   # Camara Hikvision DS-2CD2T23G0-I5 - IP: 192.168.1.100
