@@ -84,6 +84,7 @@ class MqttClientService {
       `gateway/${clientId}/command`,        // Comandos generales al gateway
       `camera/${clientId}/+/command`,       // Comandos a cámaras específicas
       `camera/${clientId}/+/config`,        // Configuración de cámaras
+      `cmd/${clientId}/+`,                  // Comandos con respuesta (ISAPI, PTZ, etc.)
     ];
 
     topics.forEach(topic => {

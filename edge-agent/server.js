@@ -2,6 +2,8 @@ const express = require('express');
 const MqttClientService = require('./services/MqttClientService');
 const CameraMonitorService = require('./services/CameraMonitorService');
 const SystemMonitorService = require('./services/SystemMonitorService');
+const isapiClient = require('./services/IsapiClientService');
+const mediamtxManager = require('./services/MediamtxManagerService');
 
 // ========================================
 // CONFIGURACIÓN
@@ -149,30 +151,98 @@ mqttService.onMessage(`camera/${CLIENT_ID}/+/command`, (topic, message) => {
   const cameraId = topic.split('/')[2];
   console.log(`[Camera ${cameraId}] Received command:`, message);
 
-  const { action, params } = message;
+  const { action } = message;
 
   switch (action) {
     case 'restart':
       console.log(`[Camera ${cameraId}] Restart not implemented yet`);
-      // TODO: Implementar restart de stream en MediaMTX
       break;
-
     case 'snapshot':
       console.log(`[Camera ${cameraId}] Snapshot not implemented yet`);
-      // TODO: Generar snapshot con FFmpeg
       break;
-
     case 'start_recording':
       console.log(`[Camera ${cameraId}] Start recording not implemented yet`);
-      // TODO: Habilitar recording en MediaMTX
       break;
-
     case 'stop_recording':
       console.log(`[Camera ${cameraId}] Stop recording not implemented yet`);
       break;
-
     default:
       console.log(`[Camera ${cameraId}] Unknown command: ${action}`);
+  }
+});
+
+// ── ISAPI commands (SD card listing, proxied to camera via HTTP) ──────────────
+mqttService.onMessage(`cmd/${CLIENT_ID}/isapi`, async (topic, message) => {
+  const { requestId, action, params } = message;
+  if (!requestId) return;
+
+  const responseTopic = `response/${CLIENT_ID}/${requestId}`;
+
+  try {
+    let data;
+    switch (action) {
+      case 'listSdRecordings': {
+        const { cameraId, start, end } = params;
+        data = await isapiClient.listSdRecordings(cameraId, start, end);
+        break;
+      }
+      case 'startPlayback': {
+        const { cameraId, playbackUri } = params;
+        const pathName = `sdplay-${cameraId}-${Date.now()}`;
+        await mediamtxManager.addPath(pathName, playbackUri);
+        data = { mediamtxPath: pathName };
+        break;
+      }
+      default:
+        throw new Error(`Unknown ISAPI action: ${action}`);
+    }
+    mqttService.publish(responseTopic, { success: true, data });
+  } catch (err) {
+    console.error(`[ISAPI] Error handling "${action}":`, err.message);
+    mqttService.publish(responseTopic, { success: false, error: err.message });
+  }
+});
+
+// ── PTZ commands (pan/tilt/zoom via ISAPI, proxied to camera via HTTP) ────────
+mqttService.onMessage(`cmd/${CLIENT_ID}/ptz`, async (topic, message) => {
+  const { requestId, action, params } = message;
+  if (!requestId) return;
+
+  const responseTopic = `response/${CLIENT_ID}/${requestId}`;
+
+  try {
+    let data;
+    switch (action) {
+      case 'move': {
+        const { cameraId, pan, tilt, zoom } = params;
+        await isapiClient.ptzMove(cameraId, pan, tilt, zoom);
+        data = { ok: true };
+        break;
+      }
+      case 'stop': {
+        const { cameraId } = params;
+        await isapiClient.ptzStop(cameraId);
+        data = { ok: true };
+        break;
+      }
+      case 'listPresets': {
+        const { cameraId } = params;
+        data = { presets: await isapiClient.listPresets(cameraId) };
+        break;
+      }
+      case 'gotoPreset': {
+        const { cameraId, presetId } = params;
+        await isapiClient.gotoPreset(cameraId, presetId);
+        data = { ok: true };
+        break;
+      }
+      default:
+        throw new Error(`Unknown PTZ action: ${action}`);
+    }
+    mqttService.publish(responseTopic, { success: true, data });
+  } catch (err) {
+    console.error(`[PTZ] Error handling "${action}":`, err.message);
+    mqttService.publish(responseTopic, { success: false, error: err.message });
   }
 });
 
