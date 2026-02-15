@@ -22,6 +22,7 @@ services:
       - ./data/recordings:/recordings
     networks:
       - edge-net
+      - shared-edge-network
 
   edge-agent:
     build: ./edge-agent
@@ -35,6 +36,7 @@ services:
       - mediamtx
     networks:
       - edge-net
+      - shared-edge-network
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
       interval: 30s
@@ -45,3 +47,5 @@ services:
 networks:
   edge-net:
     driver: bridge
+  shared-edge-network:
+    external: true
