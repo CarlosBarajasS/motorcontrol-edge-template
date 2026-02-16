@@ -25,9 +25,10 @@ webrtcAddress: :8889
 # Habilitar grabacion local en el edge (opcional)
 # Puedes apagarla en la fase inicial si solo quieres live.
 pathDefaults:
-  record: no
-  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
+  record: yes
+  recordPath: /recordings/%path/%Y-%m-%d/%H-%M-%S
   recordFormat: fmp4
+  recordSegmentDuration: 15m
   # Relay al servidor central cuando el stream esté activo.
   # El edge empuja RTSP al central-mediamtx → sin necesidad de abrir puertos en el cliente.
   # Si CENTRAL_RTSP_HOST no está definido, ffmpeg fallará silenciosamente (runOnReadyRestart lo reintenta).

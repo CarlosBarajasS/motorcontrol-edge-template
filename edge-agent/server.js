@@ -246,6 +246,63 @@ mqttService.onMessage(`cmd/${CLIENT_ID}/ptz`, async (topic, message) => {
   }
 });
 
+
+// ── Local recordings commands (list files, start playback via mediamtx) ───────
+const fs = require('fs');
+const path = require('path');
+const RECORDINGS_BASE = '/recordings';
+
+mqttService.onMessage(`cmd/${CLIENT_ID}/recordings`, async (topic, message) => {
+  const { requestId, action, params } = message;
+  if (!requestId) return;
+
+  const responseTopic = `response/${CLIENT_ID}/${requestId}`;
+
+  try {
+    let data;
+    switch (action) {
+      case 'list': {
+        const { cameraId, date } = params;
+        if (!cameraId || !date) throw new Error('cameraId and date required');
+        const dateDir = path.join(RECORDINGS_BASE, cameraId, date);
+        if (!fs.existsSync(dateDir)) {
+          data = { files: [] };
+          break;
+        }
+        const entries = fs.readdirSync(dateDir)
+          .filter(f => f.endsWith('.mp4'))
+          .sort();
+        const files = entries.map(f => {
+          const fullPath = path.join(dateDir, f);
+          const stat = fs.statSync(fullPath);
+          // fileName format: HH-MM-SS.mp4
+          const timePart = f.replace('.mp4', '').split('-').slice(0,3).join(':');
+          const startTime = new Date(`${date}T${timePart}`);
+          return {
+            name: f,
+            path: path.join(cameraId, date, f),
+            sizeMb: parseFloat((stat.size / (1024 * 1024)).toFixed(2)),
+            startTime: startTime.toISOString(),
+          };
+        });
+        data = { files };
+        break;
+      }
+      case 'startPlayback': {
+        const { cameraId, filePath } = params;
+        if (!cameraId || !filePath) throw new Error('cameraId and filePath required');
+        throw new Error('Local file playback via relay not yet implemented');
+      }
+      default:
+        throw new Error(`Unknown recordings action: ${action}`);
+    }
+    mqttService.publish(responseTopic, { success: true, data });
+  } catch (err) {
+    console.error(`[Recordings] Error handling ${action}:`, err.message);
+    mqttService.publish(responseTopic, { success: false, error: err.message });
+  }
+});
+
 // ========================================
 // HEARTBEAT
 // ========================================

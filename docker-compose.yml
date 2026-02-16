@@ -17,9 +17,12 @@ services:
       - CENTRAL_RTSP_HOST=${CENTRAL_RTSP_HOST:-177.247.175.4}
       - CENTRAL_RTSP_PORT=${CENTRAL_RTSP_PORT:-8556}
       - GATEWAY_CLIENT_ID=${CLIENT_ID:-edge-gateway-001}
+      - TZ=America/Mexico_City
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - ./data/recordings:/recordings
+      - /usr/share/zoneinfo/America/Mexico_City:/usr/share/zoneinfo/America/Mexico_City:ro
+      - /usr/share/zoneinfo/UTC:/usr/share/zoneinfo/UTC:ro
     networks:
       - edge-net
       - shared-edge-network
@@ -28,6 +31,8 @@ services:
     build: ./edge-agent
     container_name: edge-agent
     restart: unless-stopped
+    volumes:
+      - ./data/recordings:/recordings:ro
     env_file:
       - .env
     environment:
