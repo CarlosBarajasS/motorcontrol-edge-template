@@ -6,8 +6,10 @@ class CameraMonitorService {
     this.mediamtxApiUrl = mediamtxApiUrl;
     this.mediamtxAuth = mediamtxAuth; // { username, password }
     this.cameras = new Map();
+    this.lastRegistered = new Map(); // track last register publish time per camera
     this.monitorInterval = null;
     this.pollIntervalMs = 10000; // 10 segundos
+    this.registerIntervalMs = 60000; // re-registrar cada 60s como mensaje live (no retained)
   }
 
   /**
@@ -108,11 +110,25 @@ class CameraMonitorService {
     const previousStatus = this.cameras.get(cameraId);
 
     // Detectar cambios de estado
+    const now = Date.now();
+
     if (!previousStatus) {
       // Nueva cámara detectada
       console.log(`[CameraMonitor] ✨ New camera detected: ${cameraId}`);
       this.registerNewCamera(cameraId, newStatus);
-    } else if (previousStatus.online !== newStatus.online) {
+      this.lastRegistered.set(cameraId, now);
+    } else {
+      // Re-publicar register periódicamente como mensaje live (no retained)
+      // para que el backend lo reciba aunque MQTTnet no entregue retained con wildcards múltiples
+      const lastReg = this.lastRegistered.get(cameraId) || 0;
+      if (now - lastReg >= this.registerIntervalMs) {
+        console.log(`[CameraMonitor] 🔄 Re-registering camera: ${cameraId}`);
+        this.registerNewCamera(cameraId, newStatus);
+        this.lastRegistered.set(cameraId, now);
+      }
+    }
+
+    if (previousStatus && previousStatus.online !== newStatus.online) {
       // Cambio en estado online/offline
       if (newStatus.online) {
         console.log(`[CameraMonitor] ✅ Camera ${cameraId} is now online`);
