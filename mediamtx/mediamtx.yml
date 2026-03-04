@@ -22,13 +22,10 @@ rtspAddress: :8554
 hlsAddress: :8888
 webrtcAddress: :8889
 
-# Habilitar grabacion local en el edge (opcional)
-# Puedes apagarla en la fase inicial si solo quieres live.
+# La Pi actúa solo como puente de relay. Las grabaciones son responsabilidad del NVR local.
+# El NAS/nube recibe los videos desde el servidor central, no desde la Pi.
 pathDefaults:
-  record: yes
-  recordPath: /recordings/%path/%Y-%m-%d/%H-%M-%S
-  recordFormat: fmp4
-  recordSegmentDuration: 15m
+  record: no
   # Relay al servidor central cuando el stream esté activo.
   # El edge empuja RTSP al central-mediamtx → sin necesidad de abrir puertos en el cliente.
   # Si CENTRAL_RTSP_HOST no está definido, ffmpeg fallará silenciosamente (runOnReadyRestart lo reintenta).
@@ -44,8 +41,6 @@ paths:
   # Main stream (alta calidad: 1920x1080P @ 30fps H.264)
   cam-principal:
     source: rtsp://%env:CAMERA_USER%:%env:CAMERA_PASS%@%env:CAMERA_IP%:554/Streaming/Channels/101
-    # Descomentar para habilitar grabación local:
-    # record: yes
 
   # Sub stream (baja calidad, ideal para celulares o conexiones lentas)
   cam-principal-low:
