@@ -22,6 +22,11 @@ services:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - /usr/share/zoneinfo/America/Mexico_City:/usr/share/zoneinfo/America/Mexico_City:ro
       - /usr/share/zoneinfo/UTC:/usr/share/zoneinfo/UTC:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - edge-net
       - shared-edge-network
@@ -34,6 +39,11 @@ services:
       - .env
     environment:
       - TZ=${TZ:-America/Mexico_City}
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
     depends_on:
       - mediamtx
     networks:
