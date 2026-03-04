@@ -1,7 +1,7 @@
 # MediaMTX config
 # Referencia: https://mediamtx.org/docs/references/configuration-file
 
-logLevel: info
+logLevel: warn
 
 # API Configuration
 api: yes
