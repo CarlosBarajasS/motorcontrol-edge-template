@@ -309,6 +309,54 @@ mqttService.onMessage(`cmd/${CLIENT_ID}/recordings`, async (topic, message) => {
   }
 });
 
+// ── ONVIF discovery command (from wizard or admin) ──────────────────────────
+mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, message) => {
+  const { requestId, cameras: camerasToDiscover } = message;
+  console.log(`[Discovery] 📡 MQTT discover-onvif command received (${camerasToDiscover?.length} cameras)`);
+
+  if (!camerasToDiscover?.length) return;
+
+  for (const cam of camerasToDiscover) {
+    if (!cam.ip) continue;
+
+    console.log(`[Discovery] Scanning camera ${cam.id} at ${cam.ip}:${cam.onvifPort}...`);
+    const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort, cam.user, cam.pass);
+
+    if (result.status === 'discovered' && result.mainStream) {
+      const cameraKey = cam.cameraKey || `camera-${cam.id}`;
+      try {
+        await mediamtxManager.addPermanentPath(cameraKey, result.mainStream);
+        if (result.subStream) {
+          await mediamtxManager.addPermanentPath(`${cameraKey}-low`, result.subStream);
+        }
+      } catch (err) {
+        console.warn(`[Discovery] MediaMTX path update failed for camera ${cam.id}:`, err.message);
+      }
+    }
+
+    if (CENTRAL_API_TOKEN) {
+      try {
+        await axios.post(
+          `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cam.id}/streams`,
+          {
+            rtsp:       result.mainStream ?? null,
+            status:     result.status,
+            brand:      result.brand    ?? null,
+            model:      result.model    ?? null,
+            resolution: result.resolution ?? null,
+            fps:        result.fps      ?? null,
+          },
+          { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
+        );
+      } catch (err) {
+        console.warn(`[Discovery] Failed to report camera ${cam.id}:`, err.message);
+      }
+    }
+  }
+
+  console.log(`[Discovery] ✅ MQTT discovery complete (requestId: ${requestId})`);
+});
+
 // ========================================
 // ONVIF STARTUP DISCOVERY
 // ========================================
