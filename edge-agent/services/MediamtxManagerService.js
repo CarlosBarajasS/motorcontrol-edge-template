@@ -35,6 +35,7 @@ class MediamtxManagerService {
       await axios.post(url, {
         source: rtspSource,
         sourceOnDemand: false,
+        sourceProtocol: 'tcp',
         record: false,
       }, {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -46,6 +47,35 @@ class MediamtxManagerService {
       const timer = setTimeout(() => this.removePath(pathName), PATH_TTL_MS);
       activeTimers.set(pathName, timer);
     } catch (err) {
+      const msg = err.response ? JSON.stringify(err.response.data) : err.message;
+      throw new Error(`Failed to add mediamtx path "${pathName}": ${msg}`);
+    }
+  }
+
+  /**
+   * Add a permanent (always-on) path to mediamtx for a live camera stream.
+   * Unlike addPath(), this path has record: true, sourceOnDemand: false, and no TTL.
+   * @param {string} pathName   - e.g. "cam-lobby"
+   * @param {string} rtspSource - e.g. "rtsp://admin:pass@192.168.1.10/stream1"
+   */
+  async addPermanentPath(pathName, rtspSource) {
+    const url = `${MEDIAMTX_API_URL}/v3/config/paths/add/${pathName}`;
+    try {
+      await axios.post(url, {
+        source: rtspSource,
+        sourceOnDemand: false,
+        sourceProtocol: 'tcp',
+        record: true,
+      }, {
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        timeout: 5000,
+      });
+      console.log(`[MediamtxMgr] ✅ Permanent path added: ${pathName}`);
+    } catch (err) {
+      if (err.response?.status === 409) {
+        console.log(`[MediamtxMgr] ℹ️  Path already exists: ${pathName}`);
+        return;
+      }
       const msg = err.response ? JSON.stringify(err.response.data) : err.message;
       throw new Error(`Failed to add mediamtx path "${pathName}": ${msg}`);
     }

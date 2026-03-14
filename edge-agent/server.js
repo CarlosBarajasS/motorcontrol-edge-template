@@ -1,9 +1,11 @@
 const express = require('express');
+const axios = require('axios');
 const MqttClientService = require('./services/MqttClientService');
 const CameraMonitorService = require('./services/CameraMonitorService');
 const SystemMonitorService = require('./services/SystemMonitorService');
 const isapiClient = require('./services/IsapiClientService');
 const mediamtxManager = require('./services/MediamtxManagerService');
+const onvifDiscovery = require('./services/OnvifDiscoveryService');
 
 // ========================================
 // CONFIGURACIÓN
@@ -24,6 +26,10 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
 const MEDIAMTX_API_URL = process.env.MEDIAMTX_API_URL || 'http://mediamtx:9997';
 const MEDIAMTX_USERNAME = process.env.MEDIAMTX_USERNAME || '';
 const MEDIAMTX_PASSWORD = process.env.MEDIAMTX_PASSWORD || '';
+
+// Central API (for ONVIF discovery reporting and REST heartbeat)
+const CENTRAL_API_URL   = process.env.CENTRAL_API_URL   || 'http://177.247.175.4/api';
+const CENTRAL_API_TOKEN = process.env.CENTRAL_API_TOKEN || '';
 
 // Intervalos
 const HEARTBEAT_INTERVAL_MS = parseInt(process.env.HEARTBEAT_INTERVAL_MS) || 30000; // 30 segundos
@@ -304,6 +310,81 @@ mqttService.onMessage(`cmd/${CLIENT_ID}/recordings`, async (topic, message) => {
 });
 
 // ========================================
+// ONVIF STARTUP DISCOVERY
+// ========================================
+
+async function runStartupDiscovery() {
+  if (!CENTRAL_API_TOKEN) {
+    console.log('[Discovery] No CENTRAL_API_TOKEN — skipping ONVIF startup discovery');
+    return;
+  }
+
+  console.log('[Discovery] 🔍 Starting ONVIF camera discovery...');
+
+  let cameras;
+  try {
+    const res = await axios.get(
+      `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras`,
+      { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
+    );
+    cameras = res.data;
+    console.log(`[Discovery] Found ${cameras.length} camera(s) to discover`);
+  } catch (err) {
+    console.warn('[Discovery] Could not fetch cameras from central API:', err.message);
+    return;
+  }
+
+  for (const cam of cameras) {
+    if (!cam.ip) {
+      console.log(`[Discovery] ⚠️  Camera ${cam.name} has no IP — skipping`);
+      continue;
+    }
+
+    console.log(`[Discovery] Scanning ${cam.name} at ${cam.ip}:${cam.onvifPort}...`);
+    const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort, cam.onvifUser, cam.onvifPass);
+
+    if (result.status === 'discovered' && result.mainStream) {
+      try {
+        await mediamtxManager.addPermanentPath(cam.cameraKey, result.mainStream);
+        console.log(`[Discovery] ✅ ${cam.name}: path ${cam.cameraKey} added to MediaMTX`);
+      } catch (err) {
+        console.warn(`[Discovery] Failed to add MediaMTX path for ${cam.name}:`, err.message);
+      }
+
+      if (result.subStream && cam.cameraKey) {
+        const lowKey = `${cam.cameraKey}-low`;
+        try {
+          await mediamtxManager.addPermanentPath(lowKey, result.subStream);
+          console.log(`[Discovery] ✅ ${cam.name}-low: path ${lowKey} added to MediaMTX`);
+        } catch (err) {
+          console.warn(`[Discovery] Failed to add sub-stream path:`, err.message);
+        }
+      }
+    }
+
+    try {
+      await axios.post(
+        `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cam.id}/streams`,
+        {
+          rtsp:       result.mainStream ?? null,
+          status:     result.status,
+          brand:      result.brand      ?? null,
+          model:      result.model      ?? null,
+          resolution: result.resolution ?? null,
+          fps:        result.fps        ?? null,
+        },
+        { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
+      );
+      console.log(`[Discovery] 📡 Reported ${cam.name} (${result.status}) to central`);
+    } catch (err) {
+      console.warn(`[Discovery] Failed to report ${cam.name} to central:`, err.message);
+    }
+  }
+
+  console.log('[Discovery] ✅ Startup discovery complete');
+}
+
+// ========================================
 // HEARTBEAT
 // ========================================
 
@@ -322,6 +403,15 @@ async function sendHeartbeat() {
     ...systemStats,
     cameras: cameraStats,
   });
+
+  // Also notify central REST API so wizard can detect gateway online
+  if (CENTRAL_API_TOKEN) {
+    axios.post(
+      `${CENTRAL_API_URL}/edge/${CLIENT_ID}/heartbeat`,
+      {},
+      { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 5000 }
+    ).catch(() => {}); // Fire and forget
+  }
 
   console.log(`[Heartbeat] 💓 Sent (Cameras: ${cameraStats.online}/${cameraStats.total} online)`);
 }
@@ -346,6 +436,11 @@ async function init() {
 
   // Esperar 2 segundos a que la conexión esté estable
   await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Run ONVIF discovery on startup (non-blocking — failures don't crash gateway)
+  runStartupDiscovery().catch(err =>
+    console.warn('[Discovery] Startup discovery error:', err.message)
+  );
 
   // Iniciar monitoreo de cámaras
   cameraMonitor.startMonitoring();
