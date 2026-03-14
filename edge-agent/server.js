@@ -388,8 +388,8 @@ async function runStartupDiscovery() {
       continue;
     }
 
-    console.log(`[Discovery] Scanning ${cam.name} at ${cam.ip}:${cam.onvifPort}...`);
-    const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort, cam.onvifUser, cam.onvifPass);
+    console.log(`[Discovery] Scanning ${cam.name} at ${cam.ip}:${cam.onvifPort || 8000}...`);
+    const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort || 8000, cam.onvifUser || 'admin', cam.onvifPass || '');
 
     if (result.status === 'discovered' && result.mainStream) {
       try {
