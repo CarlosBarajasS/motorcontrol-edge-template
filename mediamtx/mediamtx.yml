@@ -37,7 +37,7 @@ pathDefaults:
   runOnReadyRestart: yes
 
 paths:
-  # Camara Hikvision DS-2CD2T23G0-I5 - IP: 192.168.1.100
+  # Camara IP principal
   # Main stream (alta calidad: 1920x1080P @ 30fps H.264)
   cam-principal:
     source: rtsp://%env:CAMERA_USER%:%env:CAMERA_PASS%@%env:CAMERA_IP%:554/Streaming/Channels/101
