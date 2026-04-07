@@ -73,7 +73,22 @@ class MediamtxManagerService {
       console.log(`[MediamtxMgr] ✅ Permanent path added: ${pathName}`);
     } catch (err) {
       if (err.response?.status === 409) {
-        console.log(`[MediamtxMgr] ℹ️  Path already exists: ${pathName}`);
+        // Path exists — patch it to ensure credentials/source are current
+        const patchUrl = `${MEDIAMTX_API_URL}/v3/config/paths/patch/${pathName}`;
+        try {
+          await axios.patch(patchUrl, {
+            source: rtspSource,
+            sourceOnDemand: false,
+            record: true,
+          }, {
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            timeout: 5000,
+          });
+          console.log(`[MediamtxMgr] ✅ Permanent path updated: ${pathName}`);
+        } catch (patchErr) {
+          const msg = patchErr.response ? JSON.stringify(patchErr.response.data) : patchErr.message;
+          throw new Error(`Failed to patch mediamtx path "${pathName}": ${msg}`);
+        }
         return;
       }
       const msg = err.response ? JSON.stringify(err.response.data) : err.message;
