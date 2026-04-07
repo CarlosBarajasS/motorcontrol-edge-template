@@ -323,10 +323,15 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
     const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort, cam.user, cam.pass);
 
     if (result.status === 'discovered' && result.mainStream) {
-      const cameraKey = cam.cameraKey || `camera-${cam.id}`;
+      const cameraKey  = cam.cameraKey || `camera-${cam.id}`;
+      // For DVR cameras: pick profile by channel index instead of always using mainStream
+      const profiles   = result.profiles ?? [];
+      const mainStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
+        ? profiles[cam.nvrChannel - 1].rtspUrl
+        : result.mainStream;
       try {
-        await mediamtxManager.addPermanentPath(cameraKey, result.mainStream);
-        if (result.subStream) {
+        await mediamtxManager.addPermanentPath(cameraKey, mainStream);
+        if (result.subStream && !cam.nvrChannel) {
           await mediamtxManager.addPermanentPath(`${cameraKey}-low`, result.subStream);
         }
       } catch (err) {
@@ -392,14 +397,19 @@ async function runStartupDiscovery() {
     const result = await onvifDiscovery.scan(cam.ip, cam.onvifPort || 8000, cam.onvifUser || 'admin', cam.onvifPass || '');
 
     if (result.status === 'discovered' && result.mainStream) {
+      // For DVR cameras: pick profile by channel index instead of always using mainStream
+      const profiles   = result.profiles ?? [];
+      const mainStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
+        ? profiles[cam.nvrChannel - 1].rtspUrl
+        : result.mainStream;
       try {
-        await mediamtxManager.addPermanentPath(cam.cameraKey, result.mainStream);
-        console.log(`[Discovery] ✅ ${cam.name}: path ${cam.cameraKey} added to MediaMTX`);
+        await mediamtxManager.addPermanentPath(cam.cameraKey, mainStream);
+        console.log(`[Discovery] ✅ ${cam.name} (ch${cam.nvrChannel ?? 'main'}): path ${cam.cameraKey} added to MediaMTX`);
       } catch (err) {
         console.warn(`[Discovery] Failed to add MediaMTX path for ${cam.name}:`, err.message);
       }
 
-      if (result.subStream && cam.cameraKey) {
+      if (result.subStream && cam.cameraKey && !cam.nvrChannel) {
         const lowKey = `${cam.cameraKey}-low`;
         try {
           await mediamtxManager.addPermanentPath(lowKey, result.subStream);
