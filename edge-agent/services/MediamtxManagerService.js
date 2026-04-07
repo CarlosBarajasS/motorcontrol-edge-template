@@ -72,7 +72,9 @@ class MediamtxManagerService {
       });
       console.log(`[MediamtxMgr] ✅ Permanent path added: ${pathName}`);
     } catch (err) {
-      if (err.response?.status === 409) {
+      const isAlreadyExists = err.response?.status === 409 ||
+        (err.response?.status === 400 && JSON.stringify(err.response?.data ?? '').includes('already exists'));
+      if (isAlreadyExists) {
         // Path exists — patch it to ensure credentials/source are current
         const patchUrl = `${MEDIAMTX_API_URL}/v3/config/paths/patch/${pathName}`;
         try {
