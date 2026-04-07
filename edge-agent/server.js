@@ -7,6 +7,20 @@ const isapiClient = require('./services/IsapiClientService');
 const mediamtxManager = require('./services/MediamtxManagerService');
 const onvifDiscovery = require('./services/OnvifDiscoveryService');
 
+// Injects user:pass into an RTSP URL if not already present
+function injectCreds(url, user, pass) {
+  if (!url || !user) return url;
+  try {
+    const u = new URL(url);
+    if (!u.username) {
+      u.username = encodeURIComponent(user);
+      u.password = encodeURIComponent(pass || '');
+    }
+    return u.toString();
+  } catch { return url; }
+}
+
+
 // ========================================
 // CONFIGURACIÓN
 // ========================================
@@ -326,9 +340,10 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
       const cameraKey  = cam.cameraKey || `camera-${cam.id}`;
       // For DVR cameras: pick profile by channel index instead of always using mainStream
       const profiles   = result.profiles ?? [];
-      const mainStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
+      const rawStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
         ? profiles[cam.nvrChannel - 1].rtspUrl
         : result.mainStream;
+      const mainStream = injectCreds(rawStream, cam.user, cam.pass);
       try {
         await mediamtxManager.addPermanentPath(cameraKey, mainStream);
         if (result.subStream && !cam.nvrChannel) {
@@ -399,9 +414,10 @@ async function runStartupDiscovery() {
     if (result.status === 'discovered' && result.mainStream) {
       // For DVR cameras: pick profile by channel index instead of always using mainStream
       const profiles   = result.profiles ?? [];
-      const mainStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
+      const rawStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
         ? profiles[cam.nvrChannel - 1].rtspUrl
         : result.mainStream;
+      const mainStream = injectCreds(rawStream, cam.onvifUser, cam.onvifPass);
       try {
         await mediamtxManager.addPermanentPath(cam.cameraKey, mainStream);
         console.log(`[Discovery] ✅ ${cam.name} (ch${cam.nvrChannel ?? 'main'}): path ${cam.cameraKey} added to MediaMTX`);
