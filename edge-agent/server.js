@@ -6,6 +6,7 @@ const SystemMonitorService = require('./services/SystemMonitorService');
 const isapiClient = require('./services/IsapiClientService');
 const mediamtxManager = require('./services/MediamtxManagerService');
 const onvifDiscovery = require('./services/OnvifDiscoveryService');
+const dvrScan       = require('./services/DvrScanService');
 
 // Injects user:pass into an RTSP URL if not already present
 function injectCreds(url, user, pass) {
@@ -321,6 +322,24 @@ mqttService.onMessage(`cmd/${CLIENT_ID}/recordings`, async (topic, message) => {
     console.error(`[Recordings] Error handling ${action}:`, err.message);
     mqttService.publish(responseTopic, { success: false, error: err.message });
   }
+});
+
+// ── DVR scan command (from wizard) ───────────────────────────────────────────
+mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/scan-dvr`, async (topic, message) => {
+  const { requestId, nvrIp, nvrPort, nvrUser, nvrPassword, nvrBrand } = message;
+  console.log(`[DVR] 📡 scan-dvr command received (requestId=${requestId}, ip=${nvrIp})`);
+
+  const resultTopic = `gateway/${CLIENT_ID}/evt/dvr-scan-result`;
+
+  const result = await dvrScan.scan({
+    nvrIp,
+    nvrPort: nvrPort || 80,
+    nvrUser,
+    nvrPassword,
+  });
+
+  mqttService.publish(resultTopic, { requestId, nvrBrand, ...result });
+  console.log(`[DVR] 📤 Published scan result to ${resultTopic} (status=${result.status}, channels=${result.channels.length})`);
 });
 
 // ── ONVIF discovery command (from wizard or admin) ──────────────────────────
