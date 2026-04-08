@@ -82,6 +82,7 @@ class MqttClientService {
 
     const topics = [
       `gateway/${clientId}/command`,        // Comandos generales al gateway
+      `gateway/${clientId}/cmd/+`,          // Comandos extendidos (scan-dvr, discover-onvif, etc.)
       `camera/${clientId}/+/command`,       // Comandos a cámaras específicas
       `camera/${clientId}/+/config`,        // Configuración de cámaras
       `cmd/${clientId}/+`,                  // Comandos con respuesta (ISAPI, PTZ, etc.)
