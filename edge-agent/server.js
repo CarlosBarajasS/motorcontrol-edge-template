@@ -357,12 +357,17 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
 
     if (result.status === 'discovered' && result.mainStream) {
       const cameraKey  = cam.cameraKey || `camera-${cam.id}`;
-      // For DVR cameras: pick profile by channel index instead of always using mainStream
-      const profiles   = result.profiles ?? [];
-      const rawStream = (cam.nvrChannel && profiles.length >= cam.nvrChannel)
-        ? profiles[cam.nvrChannel - 1].rtspUrl
-        : result.mainStream;
-      const mainStream = injectCreds(rawStream, cam.user, cam.pass);
+      // For DVR cameras with known channel: build RTSP URL directly (channel=N) instead of
+      // relying on ONVIF profile index ordering, which varies by brand/firmware.
+      let mainStream;
+      if (cam.nvrChannel) {
+        const u = new URL(result.mainStream);
+        u.searchParams.set('channel', cam.nvrChannel);
+        u.searchParams.set('subtype', '0');
+        mainStream = injectCreds(u.toString(), cam.user, cam.pass);
+      } else {
+        mainStream = injectCreds(result.mainStream, cam.user, cam.pass);
+      }
       try {
         await mediamtxManager.addPermanentPath(cameraKey, mainStream);
         if (result.subStream && !cam.nvrChannel) {
