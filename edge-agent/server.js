@@ -360,18 +360,26 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
       // For DVR cameras with known channel: build RTSP URL directly (channel=N) instead of
       // relying on ONVIF profile index ordering, which varies by brand/firmware.
       let mainStream;
+      let subStream;
       if (cam.nvrChannel) {
-        const u = new URL(result.mainStream);
-        u.searchParams.set('channel', cam.nvrChannel);
-        u.searchParams.set('subtype', '0');
-        mainStream = injectCreds(u.toString(), cam.user, cam.pass);
+        const uMain = new URL(result.mainStream);
+        uMain.searchParams.set('channel', cam.nvrChannel);
+        uMain.searchParams.set('subtype', '0');
+        mainStream = injectCreds(uMain.toString(), cam.user, cam.pass);
+
+        // Build substream (subtype=1) for NAS recording
+        const uSub = new URL(result.mainStream);
+        uSub.searchParams.set('channel', cam.nvrChannel);
+        uSub.searchParams.set('subtype', '1');
+        subStream = injectCreds(uSub.toString(), cam.user, cam.pass);
       } else {
         mainStream = injectCreds(result.mainStream, cam.user, cam.pass);
+        subStream  = result.subStream ? injectCreds(result.subStream, cam.user, cam.pass) : null;
       }
       try {
         await mediamtxManager.addPermanentPath(cameraKey, mainStream);
-        if (result.subStream && !cam.nvrChannel) {
-          await mediamtxManager.addPermanentPath(`${cameraKey}-low`, result.subStream);
+        if (subStream) {
+          await mediamtxManager.addPermanentPath(`${cameraKey}-low`, subStream);
         }
       } catch (err) {
         console.warn(`[Discovery] MediaMTX path update failed for camera ${cam.id}:`, err.message);
