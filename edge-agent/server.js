@@ -378,11 +378,15 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
       }
       try {
         await mediamtxManager.addPermanentPath(cameraKey, mainStream);
-        if (subStream) {
-          await mediamtxManager.addPermanentPath(`${cameraKey}-low`, subStream);
-        }
       } catch (err) {
-        console.warn(`[Discovery] MediaMTX path update failed for camera ${cam.id}:`, err.message);
+        console.warn(`[Discovery] MediaMTX path update failed for ${cameraKey}:`, err.message);
+      }
+      if (subStream) {
+        try {
+          await mediamtxManager.addPermanentPath(`${cameraKey}-low`, subStream);
+        } catch (err) {
+          console.warn(`[Discovery] MediaMTX path update failed for ${cameraKey}-low:`, err.message);
+        }
       }
     }
 
