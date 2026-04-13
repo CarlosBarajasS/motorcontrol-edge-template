@@ -391,21 +391,26 @@ mqttService.onMessage(`gateway/${CLIENT_ID}/cmd/discover-onvif`, async (topic, m
     }
 
     if (CENTRAL_API_TOKEN) {
-      try {
-        await axios.post(
-          `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cam.id}/streams`,
-          {
-            rtsp:       result.mainStream ?? null,
-            status:     result.status,
-            brand:      result.brand    ?? null,
-            model:      result.model    ?? null,
-            resolution: result.resolution ?? null,
-            fps:        result.fps      ?? null,
-          },
-          { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
-        );
-      } catch (err) {
-        console.warn(`[Discovery] Failed to report camera ${cam.id}:`, err.message);
+      const cameraId = parseInt(cam.id, 10);
+      if (!Number.isFinite(cameraId)) {
+        console.warn(`[Discovery] Skipping report for camera ${cam.id}: id is not a valid integer`);
+      } else {
+        try {
+          await axios.post(
+            `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cameraId}/streams`,
+            {
+              rtsp:       result.mainStream ?? null,
+              status:     result.status,
+              brand:      result.brand    ?? null,
+              model:      result.model    ?? null,
+              resolution: result.resolution ?? null,
+              fps:        result.fps      ?? null,
+            },
+            { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
+          );
+        } catch (err) {
+          console.warn(`[Discovery] Failed to report camera ${cameraId}:`, err.message);
+        }
       }
     }
   }
@@ -472,22 +477,27 @@ async function runStartupDiscovery() {
       }
     }
 
-    try {
-      await axios.post(
-        `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cam.id}/streams`,
-        {
-          rtsp:       result.mainStream ?? null,
-          status:     result.status,
-          brand:      result.brand      ?? null,
-          model:      result.model      ?? null,
-          resolution: result.resolution ?? null,
-          fps:        result.fps        ?? null,
-        },
-        { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
-      );
-      console.log(`[Discovery] 📡 Reported ${cam.name} (${result.status}) to central`);
-    } catch (err) {
-      console.warn(`[Discovery] Failed to report ${cam.name} to central:`, err.message);
+    const cameraId = parseInt(cam.id, 10);
+    if (!Number.isFinite(cameraId)) {
+      console.warn(`[Discovery] Skipping report for ${cam.name}: id '${cam.id}' is not a valid integer`);
+    } else {
+      try {
+        await axios.post(
+          `${CENTRAL_API_URL}/edge/${CLIENT_ID}/cameras/${cameraId}/streams`,
+          {
+            rtsp:       result.mainStream ?? null,
+            status:     result.status,
+            brand:      result.brand      ?? null,
+            model:      result.model      ?? null,
+            resolution: result.resolution ?? null,
+            fps:        result.fps        ?? null,
+          },
+          { headers: { 'X-Edge-Token': CENTRAL_API_TOKEN }, timeout: 10000 }
+        );
+        console.log(`[Discovery] 📡 Reported ${cam.name} (${result.status}) to central`);
+      } catch (err) {
+        console.warn(`[Discovery] Failed to report ${cam.name} to central:`, err.message);
+      }
     }
   }
 
