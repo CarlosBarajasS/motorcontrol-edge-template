@@ -20,6 +20,7 @@ services:
       - TZ=America/Mexico_City
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ./data/recordings:/recordings
       - /usr/share/zoneinfo/America/Mexico_City:/usr/share/zoneinfo/America/Mexico_City:ro
       - /usr/share/zoneinfo/UTC:/usr/share/zoneinfo/UTC:ro
     logging:
@@ -35,10 +36,13 @@ services:
     build: ./edge-agent
     container_name: edge-agent
     restart: unless-stopped
+    volumes:
+      - ./data/recordings:/recordings
     env_file:
       - .env
     environment:
       - TZ=${TZ:-America/Mexico_City}
+      - RECORDINGS_PATH=/recordings
     logging:
       driver: json-file
       options:

@@ -2,7 +2,7 @@ const fs   = require('fs');
 const path = require('path');
 
 // ── Defaults (all overridable via env) ────────────────────────────────────────
-const DEFAULT_RECORDINGS_PATH  = process.env.RECORDINGS_PATH         || '/data/recordings';
+const DEFAULT_RECORDINGS_PATH  = process.env.RECORDINGS_PATH         || '/recordings';
 const DEFAULT_TARGET_FREE_GB   = parseFloat(process.env.DISK_TARGET_FREE_GB)   || 8;    // GB to keep free
 const DEFAULT_EMERGENCY_FREE_GB= parseFloat(process.env.DISK_EMERGENCY_FREE_GB)|| 2;    // GB — emergency mode
 const DEFAULT_MAX_RETENTION_DAYS= parseInt(process.env.DISK_MAX_RETENTION_DAYS)|| 7;    // hard cap
