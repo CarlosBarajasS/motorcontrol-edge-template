@@ -7,6 +7,7 @@ const isapiClient = require('./services/IsapiClientService');
 const mediamtxManager = require('./services/MediamtxManagerService');
 const onvifDiscovery = require('./services/OnvifDiscoveryService');
 const dvrScan       = require('./services/DvrScanService');
+const DiskGuardService = require('./services/DiskGuardService');
 
 // Injects user:pass into an RTSP URL if not already present
 function injectCreds(url, user, pass) {
@@ -70,6 +71,11 @@ const cameraMonitor = new CameraMonitorService(
   } : null
 );
 const systemMonitor = new SystemMonitorService();
+
+const diskGuard = new DiskGuardService({
+  onWarn:    (pct) => mqttService.publish(`gateway/${CLIENT_ID}/evt/disk-warning`, { usedPercent: pct, gatewayId: CLIENT_ID }),
+  onCleanup: (freed, dirs) => mqttService.publish(`gateway/${CLIENT_ID}/evt/disk-cleanup`, { freedBytes: freed, deletedDirs: dirs.length, gatewayId: CLIENT_ID }),
+});
 
 // ========================================
 // EXPRESS APP
@@ -565,6 +571,9 @@ async function init() {
   // Iniciar monitoreo de cámaras
   cameraMonitor.startMonitoring();
 
+  // Iniciar guardián de disco
+  diskGuard.start();
+
   // Iniciar heartbeat
   setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
   sendHeartbeat(); // Enviar inmediatamente
@@ -580,6 +589,7 @@ async function init() {
 process.on('SIGINT', () => {
   console.log('\n[Gateway] Shutting down gracefully...');
   cameraMonitor.stopMonitoring();
+  diskGuard.stop();
   mqttService.disconnect();
   process.exit(0);
 });
