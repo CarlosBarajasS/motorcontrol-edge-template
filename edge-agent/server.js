@@ -73,8 +73,10 @@ const cameraMonitor = new CameraMonitorService(
 const systemMonitor = new SystemMonitorService();
 
 const diskGuard = new DiskGuardService({
-  onWarn:    (pct) => mqttService.publish(`gateway/${CLIENT_ID}/evt/disk-warning`, { usedPercent: pct, gatewayId: CLIENT_ID }),
-  onCleanup: (freed, dirs) => mqttService.publish(`gateway/${CLIENT_ID}/evt/disk-cleanup`, { freedBytes: freed, deletedDirs: dirs.length, gatewayId: CLIENT_ID }),
+  onCleanup: (freed, count, mode) => mqttService.publish(
+    `gateway/${CLIENT_ID}/evt/disk-cleanup`,
+    { freedBytes: freed, deletedEntries: count, mode, gatewayId: CLIENT_ID }
+  ),
 });
 
 // ========================================
