@@ -19,7 +19,7 @@ services:
       - GATEWAY_CLIENT_ID=${CLIENT_ID:-edge-gateway-001}
       - TZ=America/Mexico_City
     volumes:
-      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:rw
       - ./data/recordings:/recordings
       - /usr/share/zoneinfo/America/Mexico_City:/usr/share/zoneinfo/America/Mexico_City:ro
       - /usr/share/zoneinfo/UTC:/usr/share/zoneinfo/UTC:ro
@@ -38,11 +38,16 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/recordings:/recordings
+      - ./mediamtx/mediamtx.yml:/config/mediamtx.yml:rw
     env_file:
       - .env
     environment:
       - TZ=${TZ:-America/Mexico_City}
       - RECORDINGS_PATH=/recordings
+      - NVR_IP=${NVR_IP:-}
+      - NVR_PORT=${NVR_PORT:-80}
+      - NVR_USER=${NVR_USER:-admin}
+      - NVR_PASSWORD=${NVR_PASSWORD:-}
     logging:
       driver: json-file
       options:

@@ -8,6 +8,7 @@ const mediamtxManager = require('./services/MediamtxManagerService');
 const onvifDiscovery = require('./services/OnvifDiscoveryService');
 const dvrScan       = require('./services/DvrScanService');
 const DiskGuardService = require('./services/DiskGuardService');
+const DvrWatchdogService = require('./services/DvrWatchdogService');
 
 // Injects user:pass into an RTSP URL if not already present
 function injectCreds(url, user, pass) {
@@ -49,6 +50,12 @@ const CENTRAL_API_TOKEN = process.env.CENTRAL_API_TOKEN || '';
 
 // Intervalos
 const HEARTBEAT_INTERVAL_MS = parseInt(process.env.HEARTBEAT_INTERVAL_MS) || 30000; // 30 segundos
+
+// NVR / DVR
+const NVR_IP       = process.env.NVR_IP       || '';
+const NVR_PORT     = parseInt(process.env.NVR_PORT) || 80;
+const NVR_USER     = process.env.NVR_USER     || process.env.NVR_USERNAME || 'admin';
+const NVR_PASSWORD = process.env.NVR_PASSWORD || '';
 
 // ========================================
 // SERVICIOS
@@ -575,6 +582,21 @@ async function init() {
 
   // Iniciar guardián de disco
   diskGuard.start();
+
+  // Iniciar watchdog de IP del DVR
+  const dvrWatchdog = new DvrWatchdogService({
+    nvrIp:        NVR_IP,
+    nvrPort:      NVR_PORT,
+    nvrUser:      NVR_USER,
+    nvrPassword:  NVR_PASSWORD,
+    mediamtxApiUrl: MEDIAMTX_API_URL,
+    mediamtxAuth: MEDIAMTX_USERNAME && MEDIAMTX_PASSWORD
+      ? { username: MEDIAMTX_USERNAME, password: MEDIAMTX_PASSWORD }
+      : null,
+    mqttPublish:    (topic, payload) => mqttService.publish(topic, payload),
+    configFilePath: '/config/mediamtx.yml',
+  });
+  dvrWatchdog.start();
 
   // Iniciar heartbeat
   setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
