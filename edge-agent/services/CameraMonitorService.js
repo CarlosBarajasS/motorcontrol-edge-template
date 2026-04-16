@@ -156,7 +156,7 @@ class CameraMonitorService {
    * Registrar nueva cámara en el servidor
    */
   registerNewCamera(cameraId, status) {
-    const gatewayId = process.env.CLIENT_ID || process.env.GATEWAY_CLIENT_ID || 'edge-gateway-001';
+    const gatewayId = (process.env.CLIENT_ID || process.env.GATEWAY_CLIENT_ID || 'edge-gateway-001').replace(/:/g, '-');
     const centralRtspHost = process.env.CENTRAL_RTSP_HOST;
     const centralRtspPort = process.env.CENTRAL_RTSP_PORT || '8556';
 

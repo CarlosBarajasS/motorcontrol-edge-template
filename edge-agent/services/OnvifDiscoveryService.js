@@ -93,8 +93,17 @@ class OnvifDiscoveryService {
 
           // Determine main stream (highest resolution) and sub stream (lowest)
           const sorted    = [...profilesWithUri].sort((a, b) => this._pixels(b) - this._pixels(a));
-          const mainStream = sorted[0]?.rtspUrl ?? null;
-          const subStream  = sorted.length > 1 ? sorted[sorted.length - 1]?.rtspUrl : null;
+          const _injectCreds = (url) => {
+            if (!url || !user) return url;
+            try {
+              const u = new URL(url);
+              u.username = encodeURIComponent(user);
+              u.password = encodeURIComponent(pass || '');
+              return u.toString();
+            } catch { return url; }
+          };
+          const mainStream = _injectCreds(sorted[0]?.rtspUrl ?? null);
+          const subStream  = sorted.length > 1 ? _injectCreds(sorted[sorted.length - 1]?.rtspUrl) : null;
           const mainProfile = sorted[0];
 
           resolve({
