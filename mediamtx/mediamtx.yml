@@ -1,5 +1,11 @@
-# MediaMTX config
-# Referencia: https://mediamtx.org/docs/references/configuration-file
+# MediaMTX config — edge gateway template
+# ⚠️  ESTE ARCHIVO ES GENERADO POR EL WIZARD DE INSTALACIÓN.
+# Después de colocar el archivo generado, ejecuta:
+#   git update-index --assume-unchanged mediamtx/mediamtx.yml
+# para protegerlo de futuros git pull.
+#
+# Si instalas manualmente, reemplaza CHANGE_ME_PASSWORD con una contraseña segura
+# y asegúrate de que MEDIAMTX_PASSWORD en .env tenga el mismo valor.
 
 logLevel: warn
 
@@ -7,44 +13,41 @@ logLevel: warn
 api: yes
 apiAddress: 0.0.0.0:9997
 
-# Authentication - Usuario simple para API interna
 authInternalUsers:
   - user: edge
-    pass: edge123
+    # ⚠️  REEMPLAZAR con la contraseña real (mínimo 16 caracteres)
+    # Este valor DEBE coincidir con MEDIAMTX_PASSWORD en .env
+    pass: CHANGE_ME_PASSWORD
     permissions:
       - action: api
       - action: read
+      - action: publish
+      - action: playback
 
-# Authentication methods para RTSP (streams)
 rtspAuthMethods: [basic]
-
 rtspAddress: :8554
 hlsAddress: :8888
 webrtcAddress: :8889
 
-# La Pi actúa solo como puente de relay. Las grabaciones son responsabilidad del NVR local.
-# El NAS/nube recibe los videos desde el servidor central, no desde la Pi.
 pathDefaults:
   record: no
-  # Relay al servidor central cuando el stream esté activo.
-  # El edge empuja RTSP al central-mediamtx → sin necesidad de abrir puertos en el cliente.
-  # Si CENTRAL_RTSP_HOST no está definido, ffmpeg fallará silenciosamente (runOnReadyRestart lo reintenta).
+  recordPath: /recordings/%path/%Y-%m-%d/%H-%M-%S
+  recordFormat: fmp4
+  recordSegmentDuration: 15m
+  sourceOnDemand: false
+  sourceProtocol: tcp
+  # Relay al servidor central via RTSP push.
+  # ${VAR} son variables de entorno del contenedor (docker-compose las inyecta).
   runOnReady: >-
-    ffmpeg -re
+    ffmpeg
+    -rtsp_transport tcp
     -i rtsp://${MEDIAMTX_USERNAME}:${MEDIAMTX_PASSWORD}@127.0.0.1:8554/$MTX_PATH
-    -c copy -f rtsp
+    -c copy -f rtsp -rtsp_transport tcp
     rtsp://${MEDIAMTX_PUSH_USER}:${MEDIAMTX_PUSH_PASS}@${CENTRAL_RTSP_HOST}:${CENTRAL_RTSP_PORT}/${GATEWAY_CLIENT_ID}/$MTX_PATH
   runOnReadyRestart: yes
 
 paths:
-  # Camara IP principal
-  # Main stream (alta calidad: 1920x1080P @ 30fps H.264)
-  cam-principal:
-    source: rtsp://%env:CAMERA_USER%:%env:CAMERA_PASS%@%env:CAMERA_IP%:554/Streaming/Channels/101
-
-  # Sub stream (baja calidad, ideal para celulares o conexiones lentas)
-  cam-principal-low:
-    source: rtsp://%env:CAMERA_USER%:%env:CAMERA_PASS%@%env:CAMERA_IP%:554/Streaming/Channels/102
-
-  # Ruta comodín para agregar más cámaras dinámicamente en el futuro
-  all_others:
+  # Los paths de cámaras se registran dinámicamente por edge-agent
+  # via POST /v3/config/paths/add/{name} tras el discovery del DVR.
+  # No definir paths estáticos aquí — causan crash si las variables no están definidas.
+  all_others: ~
