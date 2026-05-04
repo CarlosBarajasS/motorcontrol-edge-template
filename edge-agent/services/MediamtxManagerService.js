@@ -54,7 +54,7 @@ class MediamtxManagerService {
 
   /**
    * Add a permanent (always-on) path to mediamtx for a live camera stream.
-   * Unlike addPath(), this path has record: true, sourceOnDemand: false, and no TTL.
+   * Recording is always disabled — the central server handles recording, not the Pi.
    * @param {string} pathName   - e.g. "cam-lobby"
    * @param {string} rtspSource - e.g. "rtsp://admin:pass@192.168.1.10/stream1"
    */
@@ -65,7 +65,7 @@ class MediamtxManagerService {
         source: rtspSource,
         sourceOnDemand: false,
         sourceProtocol: 'tcp',
-        record: true,
+        record: false,
       }, {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         timeout: 5000,
@@ -81,7 +81,7 @@ class MediamtxManagerService {
           await axios.patch(patchUrl, {
             source: rtspSource,
             sourceOnDemand: false,
-            record: true,
+            record: false,
           }, {
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
             timeout: 5000,
