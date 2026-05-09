@@ -38,6 +38,12 @@ pathDefaults:
   sourceProtocol: tcp
   # Relay al servidor central via RTSP push.
   # ${VAR} son variables de entorno del contenedor (docker-compose las inyecta).
+  #
+  # ⚠️  SOLO para cámaras IP H264 (ONVIF). Para DVR con H265 (ej. Dahua):
+  #   1. NO uses all_others — define paths por canal con source: apuntando al DVR directamente.
+  #   2. En el runOnReady lee del DVR directo (-i rtsp://dvr-ip/...) NO de 127.0.0.1:8554.
+  #   3. Agrega -r 15 y transcode a H264: -c:v libx264 -preset ultrafast -r 15 -crf 28
+  #   El timebase RTSP de H265 es 90kHz; sin -r 15 FFmpeg genera 90000fps → stream malformado.
   runOnReady: >-
     ffmpeg
     -rtsp_transport tcp
@@ -47,7 +53,7 @@ pathDefaults:
   runOnReadyRestart: yes
 
 paths:
-  # Los paths de cámaras se registran dinámicamente por edge-agent
-  # via POST /v3/config/paths/add/{name} tras el discovery del DVR.
-  # No definir paths estáticos aquí — causan crash si las variables no están definidas.
+  # Los paths de cámaras IP H264 se registran dinámicamente por edge-agent
+  # via POST /v3/config/paths/add/{name} tras el discovery ONVIF.
+  # Para DVR H265: ver advertencia en pathDefaults.runOnReady — requiere config por canal.
   all_others: ~
